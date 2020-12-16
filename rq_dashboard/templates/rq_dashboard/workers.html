@@ -16,19 +16,23 @@
                 <tr>
                     <th>Worker</th>
                     <th>Current&nbsp;job</th>
+                    <th>Successful job count</th>
+                    <th>Failed job count</th>
+                    <th>Total working time</th>
                     <th>Queues</th>
+                    <th class="narrow">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <tr data-role="loading-placeholder">
-                    <td colspan="3">Loading...</td>
+                    <td colspan="7">Loading...</td>
                 </tr>
             </tbody>
         </table>
     </div>
 
     <script name="worker-row" type="text/template">
-        <tr data-role="worker">
+        <tr data-role="worker" data-worker-name="<%= d.name %>">
             <td <% if (d.version && d.python_version) { %>title ="RQ <%= d.version %> / Python <%= d.python_version %>" <% } %>>
                 <%= d.name %>
             </td>
@@ -43,13 +47,23 @@
             <td><%= d.current_job %></td>
             <% } %>
 
+            <td><%= d.successful_job_count %></td>
+
+            <td><%= d.failed_job_count %></td>
+
+            <td><%= d.total_working_time %> hh:mm:ss</td>
+
             <td><%= d.queues.join(', ') %></td>
+
+             <td class="actions narrow">
+                <a href="#" data-role="stop-worker-btn" class="btn btn-outline-danger btn-sm">Stop</a>
+            </td>
         </tr>
     </script>
 
     <script name="no-workers-row" type="text/template">
         <tr>
-            <td colspan="3">No workers.</td>
+            <td colspan="7">No workers.</td>
         </tr>
     </script>
 

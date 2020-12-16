@@ -31,6 +31,15 @@
                     } else {
                         worker.state = 'pause';
                     }
+                    if(worker.total_working_time){
+                        let dateObj = new Date(worker.total_working_time * 1000);
+                        let hours = dateObj.getUTCHours();
+                        let minutes = dateObj.getUTCMinutes();
+                        let seconds = dateObj.getSeconds();
+                        worker.total_working_time = hours.toString().padStart(2, '0') + ':' +
+                            minutes.toString().padStart(2, '0') + ':' +
+                            seconds.toString().padStart(2, '0')
+                    }
                     html += template({d: worker}, {variable: 'd'});
                 });
                 $tbody.append(html);
@@ -44,6 +53,25 @@
             }
         });
     };
+
+    // Enable the AJAX behaviour of the delete button
+    $tbody.on('click', '[data-role=stop-worker-btn]', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        var $this = $(this),
+            $row = $this.parents('tr'),
+            worker_name = $row.data('worker-name'),
+            url = url_for('stop_worker', worker_name);
+
+        modalConfirm('stop worker', function() {
+            $.post(url, function(data) {
+                $row.fadeOut('fast', function() { $row.remove(); });
+            });
+        });
+
+        return false;
+    });
 
     var refresh_table_loop = function() {
         $('span.loading').fadeIn('fast');

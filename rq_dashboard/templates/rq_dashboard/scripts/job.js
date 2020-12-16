@@ -29,6 +29,10 @@
         if (job.status === "failed") {
             $("#requeue-job-btn").show()
         }
+        if (job.status === "started") {
+            $("#requeue-job-btn").hide()
+            $("#stop-job-btn").show()
+        }
         html += template({d: job}, {variable: 'd'});
         $job_data[0].innerHTML = html;
 
@@ -56,6 +60,17 @@
         var url = url_for('delete_job', job_id);
 
         modalConfirm('delete job', function() {
+            $.post(url, {}, function(){
+                $(location).attr("href", url_for('queues_view'));
+            });
+        });
+        return false;
+    });
+
+    $("#stop-job-btn").click(function() {
+        var url = url_for('stop_job', job_id);
+
+        modalConfirm('stop job', function() {
             $.post(url, {}, function(){
                 $(location).attr("href", url_for('queues_view'));
             });

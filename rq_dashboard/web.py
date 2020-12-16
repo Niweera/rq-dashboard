@@ -39,6 +39,7 @@ from rq import (
     pop_connection,
     push_connection,
     requeue_job,
+    command,
 )
 from rq.job import Job
 from rq.registry import (
@@ -54,7 +55,10 @@ from .version import VERSION as rq_dashboard_version
 
 
 blueprint = Blueprint(
-    "rq_dashboard", __name__, template_folder="templates", static_folder="static",
+    "rq_dashboard",
+    __name__,
+    template_folder="templates",
+    static_folder="static",
 )
 
 
@@ -358,6 +362,26 @@ def delete_job_view(job_id):
     return dict(status="OK")
 
 
+@blueprint.route("/job/<job_id>/stop", methods=["POST"])
+@jsonify
+def stop_job_view(job_id):
+    job = Job.exists(job_id)
+    if job:
+        command.send_stop_job_command(connection=current_app.redis_conn, job_id=job_id)
+    return dict(status="OK")
+
+
+@blueprint.route("/worker/<worker_name>/stop", methods=["POST"])
+@jsonify
+def stop_worker_view(worker_name):
+    worker = Worker.find_by_key(f"rq:worker:{worker_name}")
+    if worker:
+        command.send_shutdown_command(
+            connection=current_app.redis_conn, worker_name=worker_name
+        )
+    return dict(status="OK")
+
+
 @blueprint.route("/job/<job_id>/requeue", methods=["POST"])
 @jsonify
 def requeue_job_view(job_id):
@@ -536,6 +560,9 @@ def list_workers(instance_number):
         (
             dict(
                 name=worker.name,
+                successful_job_count=worker.successful_job_count,
+                failed_job_count=worker.failed_job_count,
+                total_working_time=worker.total_working_time,
                 queues=serialize_queue_names(worker),
                 state=str(worker.get_state()),
                 current_job=serialize_current_job(worker.get_current_job()),
