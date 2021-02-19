@@ -41,6 +41,7 @@ from rq import (
     requeue_job,
     command,
 )
+from rq.exceptions import NoSuchJobError
 from rq.job import Job
 from rq.registry import (
     DeferredJobRegistry,
@@ -235,7 +236,7 @@ def get_queue_registry_jobs_count(queue_name, registry_name, offset, per_page):
 
     job_ids = current_queue.get_job_ids(offset, per_page)
     current_queue_jobs = [queue.fetch_job(job_id) for job_id in job_ids]
-    jobs = [serialize_job(job) for job in current_queue_jobs]
+    jobs = [serialize_job(job) for job in current_queue_jobs if job is not None]
 
     return (total_items, jobs)
 
@@ -357,9 +358,12 @@ def job_view(instance_number, job_id):
 @blueprint.route("/job/<job_id>/delete", methods=["POST"])
 @jsonify
 def delete_job_view(job_id):
-    job = Job.fetch(job_id)
-    job.delete()
-    return dict(status="OK")
+    try:
+        job = Job.fetch(job_id)
+        job.delete()
+        return dict(status="OK")
+    except NoSuchJobError:
+        return dict(status="OK")
 
 
 @blueprint.route("/job/<job_id>/stop", methods=["POST"])
@@ -392,12 +396,15 @@ def requeue_job_view(job_id):
 @blueprint.route("/requeue/<queue_name>", methods=["GET", "POST"])
 @jsonify
 def requeue_all(queue_name):
-    fq = Queue(queue_name).failed_job_registry
-    job_ids = fq.get_job_ids()
-    count = len(job_ids)
-    for job_id in job_ids:
-        requeue_job(job_id, connection=current_app.redis_conn)
-    return dict(status="OK", count=count)
+    try:
+        fq = Queue(queue_name).failed_job_registry
+        job_ids = fq.get_job_ids()
+        count = len(job_ids)
+        for job_id in job_ids:
+            requeue_job(job_id, connection=current_app.redis_conn)
+        return dict(status="OK", count=count)
+    except NoSuchJobError:
+        return dict(status="OK", count=0)
 
 
 @blueprint.route("/queue/<queue_name>/<registry_name>/empty", methods=["POST"])
